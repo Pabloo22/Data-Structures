@@ -1,180 +1,151 @@
-from typing import List, Tuple
 import numpy as np
-from weighted_directed_vertex import WDVertex
-from edges import Edge
+from copy import deepcopy
+from typing import TypeVar
+
+Matrix = TypeVar('Matrix', list[list[float]], np.ndarray)
 
 
 class Graph:
 
-    __vertices_str: List[str]
-    __vertices: List[WDVertex]
-    __edges: List[Edge]
-    __adj_list: List[int or str]  # keys: vertices_, values: set of adjacent vertices_
-    __length: int
+    __size: int
+    __adj_list: list[list[tuple]]
+    __adj_matrix: None or Matrix
+    __labels: list
 
-    def __init__(self, vertices: List[str] = None,
-                 adj_list: List[List[str] or List[Tuple[str, float]]] = None):
+    def __init__(self, n_nodes: int = 0, labels: list = None):
+        if isinstance(labels, list):
+            if len(labels) != n_nodes:
+                raise ValueError("len(labels) != n_nodes")
 
-        self.__vertices_str = vertices if vertices is not None else []
-        self._set_vertices()
-        self.__adj_list = adj_list if adj_list is not None else []
-        self.__set_edges()
-
-    def _set_vertices(self):
-        self.__vertices = []
-        for v in self.__vertices_str:
-            if isinstance(v, list) or isinstance(v, tuple):
-                self.__vertices.append(WDVertex(*v))
-            else:
-                self.__vertices.append(WDVertex(str(v)))
-
-    def __set_edges(self):
-        self.__edges = []
-        for i, list_ in enumerate(self.__adj_list):
-            for v in list_:
-                v1 = str(self.__vertices[i])
-                if isinstance(v, list) or isinstance(v, tuple):
-                    self.add_edge(v1, v[0], v[1])
-                else:
-                    v2 = self.__vertices[self.get_vertex_index(v)]
-                    self.__edges.append(Edge(v1, v2))
-                    self.add_edge(v1, v)
-
-    def get_vertex_index(self, vertex):
-        return self.__vertices_str.index(str(vertex))
-
-    def get_vertex_from_str(self, name: str or int) -> WDVertex:
-        return self.__vertices[self.get_vertex_index(name)]
-
-    def add_vertex(self, vertex: any, weight=1):
-        if not isinstance(vertex, WDVertex):
-            vertex = WDVertex(str(vertex), weight)
-
-        self.__vertices.append(vertex)
-        self.__vertices_str.append(str(vertex))
-        self.__adj_list.append([])
-
-    def add_vertices(self, *vertices: WDVertex or list):
-        for v in vertices:
-            if isinstance(v, list) or isinstance(v, tuple):
-                self.add_vertex(*v)
-            else:
-                self.add_vertex(v)
-
-    def add_edge(self, v1: str, v2: str, weight=1):
-        i = self.get_vertex_index(v1)
-        j = self.get_vertex_index(v2)
-        self.__adj_list[i].append((str(v2), weight))
-        self.__adj_list[j].append((str(v1), weight))
-
-        v1 = self.get_vertex_from_str(v1)
-        v2 = self.get_vertex_from_str(v2)
-        v1.add_adj_vertex(v2)
-        v2.add_adj_vertex(v2)
-
-        self.__edges.append(Edge(v1, v2, weight))
-
-    def add_edges(self, *edges: Edge):
-        for e in edges:
-            self.add_edge(e.v1, e.v2, e.weight)
+        self.__size = n_nodes
+        self.__adj_list = [[] for _ in range(n_nodes)]
+        self.__labels = [None] * n_nodes if labels is None else labels
+        self.__adj_matrix = None
 
     @property
-    def vertices_str(self):
-        return self.__vertices_str
+    def size(self):
+        return self.__size
 
     @property
-    def vertices(self):
-        return self.__vertices
+    def adj_matrix(self):
+        if self.__adj_matrix is None:
+            adj_matrix = np.zeros((self.__size, self.__size), dtype=float)
+            for i, value in enumerate(self.__adj_list):
+                for j, w in value:
+                    adj_matrix[i][j] = w
 
-    @vertices.setter
-    def vertices(self, vertices):
+            self.__adj_matrix = adj_matrix
 
-        def change_name(old_list: list):
-            new_list = []
-            for element in old_list:
-                if isinstance(element, tuple) or isinstance(element, list):
-                    new_list.append((str(new_names[element[0]]), element[1]))
-                else:
-                    new_list.append(str(new_names[element[0]]))
-
-            return new_list
-
-        vertices = list(map(str, vertices))
-        new_names = {old_name: new_name for old_name, new_name in zip(self.__vertices_str, vertices)}
-        new_adj_list = list(map(change_name, self.__adj_list))
-        self.__init__(vertices, new_adj_list)
-
+        return self.__adj_matrix
+        
     @property
-    def edges(self):
-        return self.__edges
+    def labels(self):
+        return self.__labels
 
-    def print_edges(self):
-        for edge in self.__edges:
-            print(edge)
+    def add_edge(self, i: int, j: int, weight: float = 1):
+        if self.__adj_matrix is not None:
+            self.adj_matrix[i][j] = weight
+            self.adj_matrix[j][i] = weight
 
-    def get_adj_matrix(self):
-        adj_matrix = np.zeros((len(self.__vertices), len(self.__vertices)))
-        for edge in self.__edges:
-            adj_matrix[self.__vertices.index(edge.v1)][self.__vertices.index(edge.v2)] = edge.weight
-            adj_matrix[self.__vertices.index(edge.v2)][self.__vertices.index(edge.v1)] = edge.weight
+    def add_arc(self, i: int, j: int, weight: float = 1):
+        if self.__adj_matrix is not None:
+            self.adj_matrix[i][j] = weight
 
-        return adj_matrix
+    def set_label(self, i: int, value: any):
+        if self.__adj_matrix is not None:
+            self.__labels[i] = value
+
+    def get_label(self, i: int) -> any:
+        return self.__labels[i]
+
+    def get_adjacent_to(self, i: int) -> list[tuple[int, float]]:
+        return self.__adj_list[i]
+
+    def warshall(self) -> Matrix:
+        n = len(self.adj_matrix)
+        transitive_matrix = deepcopy(self.adj_matrix)
+        for k in range(n):
+            for j in range(n):
+                for i in range(n):
+                    if transitive_matrix[i][j] or (transitive_matrix[i][k] and transitive_matrix[k][j]):
+                        transitive_matrix[i][j] = 1
+                    else:
+                        transitive_matrix[i][j] = 0
+
+        return transitive_matrix
+
+    def get_distances(self) -> Matrix:
+
+        n = len(self.adj_matrix)
+        dist_matrix = deepcopy(self.adj_matrix)
+        for k in range(n):
+            for j in range(n):
+                for i in range(n):
+                    if dist_matrix[i][j] or (dist_matrix[i][k] and dist_matrix[k][j]):
+                        if not dist_matrix[i][j]:
+                            dist_matrix[i][j] = dist_matrix[i][k] + dist_matrix[k][j]
+                        elif not (dist_matrix[i][k] and dist_matrix[k][j]):
+                            dist_matrix[i][j] = dist_matrix[i][j]
+                        else:
+                            dist_matrix[i][j] = min(dist_matrix[i][j], dist_matrix[i][k] + dist_matrix[k][j])
+        return dist_matrix
+
+    def are_connected(self, i, j) -> bool:
+        pass
 
     @staticmethod
-    def build_adj_list(adj_matrix, vertices):
-        _adj_list = [[] for _ in range(len(vertices))]
-        for i in range(len(adj_matrix)):
-            for j in range(len(adj_matrix[i])):
-                if adj_matrix[i][j] != 0:
-                    _adj_list[i].append((vertices[j], adj_matrix[i][j]))
+    def create_graph() -> 'Graph':
+        def is_valid_vertex(i, n):
+            return 0 <= i <= n-1
 
-        return _adj_list
+        n = int(input("Enter the number of vertex: "))
+        graph = Graph(n)
+        done = False
+        while not done:
+            action = int(input("Type the number of the action: "
+                               "(0=exit, 1=add_edge, 2=add_arc,"
+                               "3=add_weighted_edge, 4=add_weighted_arc) "))
+            if action == 0:
+                done = True
+            elif action == 1:
+                i = int(input("vertex 1: "))
+                while not is_valid_vertex(i, n):
+                    i = int(input("vertex 1: "))
+                j = int(input("vertex 2: "))
+                graph.add_edge(i, j)
+            elif action == 2:
+                i = int(input("initial vertex: "))
+                j = int(input("final vertex: "))
+                graph.add_edge(i, j)
+            elif action == 3:
+                i = int(input("vertex 1: "))
+                j = int(input("vertex 2: "))
+                w = float(input("weight: "))
+                graph.add_edge(i, j, w)
+            elif action == 4:
+                i = int(input("initial vertex: "))
+                j = int(input("final vertex: "))
+                w = float(input("weight: "))
+                graph.add_edge(i, j, w)
 
-    @staticmethod
-    def check_degree_sequence(sequence: list):
-        """
-        This algorithm is based on the Havel-Hakimi theorem.
-        Returns True if the degree sequence is valid and returns False
-        if it isn't.
-        It is a static method
-        """
+        return graph
 
-        while True:
-            sequence.sort(reverse=True)  # O(n log n)
-            first = sequence.pop(0)
-
-            for i in range(len(sequence[:first])):
-                sequence[i] -= 1
-
-            if -1 in sequence:
-                return False
-            elif max(sequence) == 0:
-                return True
-
-    def breadth_first_search(self, start=None):
-        """ In development """
-        first_vertex_str = str(start) if start is not None else self.__vertices_str[0]
-        first_vertex = self.get_vertex_from_str(first_vertex_str)
-
-        unexplored_vertices = [v for v in self.__vertices]
-        unexplored_vertices.remove(first_vertex)
-        tree = Graph([str(first_vertex)])
-        tree.add_vertex(first_vertex)
-        while unexplored_vertices:
-            unexplored_vertices.remove(first_vertex)
-            tree.add_vertex(first_vertex)
-
-    def __len__(self):
-        return len(self.__vertices)
+    def set_labels(self, dtype: type = str):
+        for i in range(self.__size):
+            label = dtype(input(f"Label for vertex {i}: "))
+            self.set_label(i, label)
 
     def __str__(self):
-        return str(self.__adj_list)
+        return "Graph(\nlabels: " + str(self.__labels) + ",\n" \
+                + "adjacency matrix:\n" + str(self.__adj_matrix) + ")"
 
 
 if __name__ == "__main__":
-    vertices__ = ["a", "b", "c", "d"]
-    adj_list__ = [[("a", 3), ("c", 2)], [("c", 2)], [("d", -2), ("a", 2)], [("c", -2)]]
-    my_graph = Graph(vertices__, adj_list__)
-    my_graph.vertices = [1, 2, 3, 4]
-    a = WDVertex("a")
-    print(a)
+    G = Graph(4)
+    G.add_arc(0, 2, 4)
+    G.add_arc(1, 0, 1)
+    G.add_arc(1, 3, 3)
+    G.add_arc(3, 1, 5)
+    print(G)
+    print(G.warshall())
+    print(G.get_distances())
