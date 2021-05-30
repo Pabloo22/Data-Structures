@@ -1,4 +1,7 @@
-from Trees.bynary_heap import BinaryHeap
+from bynary_heap import BinaryHeap
+from typing import TypeVar
+
+_T = TypeVar("_T")
 
 
 class PriorityQueue:
@@ -7,22 +10,29 @@ class PriorityQueue:
     The elements in the heap are tuples of the form: (priority number, tie breaker (insert order), data)
     """
     __heap: BinaryHeap
-    __insert_order: int
 
-    def __init__(self):
-        self.__heap = BinaryHeap()
-        self.__insert_order = 0
+    def __init__(self, values: list[tuple[float or int, _T]] = None):
+        values = [] if values is None else values
 
-    def enqueue(self, priority: float, data: any):
-        self.__heap.push((priority, self.__insert_order, data))
-        self.__insert_order += 1
+        if not isinstance(values, list):
+            raise ValueError("'values' must be a list")
+        for v in values:
+            if (not isinstance(v, tuple) or len(v) != 2 or
+                    not isinstance(v[0], float) or not isinstance(v[0], int)):
+                raise ValueError("'values' must be a list of tuples with the form " +
+                                 "(priority, value)")
+
+        self.__heap = BinaryHeap(values)
+
+    def enqueue(self, priority: float or int, data: _T):
+        self.__heap.push((priority, data))
 
     def dequeue(self):
-        _, _, element = self.__heap.pop()
+        _, element = self.__heap.pop()
         return element
 
     def peek(self):
-        _, _, element = self.__heap.peek()
+        _, element = self.__heap.peek()
         return element
 
     @property
@@ -35,4 +45,3 @@ class PriorityQueue:
 
 if __name__ == "__main__":
     a = PriorityQueue()
-
