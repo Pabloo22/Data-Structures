@@ -17,8 +17,8 @@ class PriorityQueue:
         if not isinstance(values, list):
             raise ValueError("'values' must be a list")
         for v in values:
-            if (not isinstance(v, tuple) or len(v) != 2 or
-                    not isinstance(v[0], float) or not isinstance(v[0], int)):
+            if (not isinstance(v, tuple) or len(v) != 2 and
+                    (not isinstance(v[0], float) or not isinstance(v[0], int))):
                 raise ValueError("'values' must be a list of tuples with the form " +
                                  "(priority, value)")
 
@@ -28,12 +28,13 @@ class PriorityQueue:
         self.__heap.push((priority, data))
 
     def dequeue(self):
-        _, element = self.__heap.pop()
-        return element
+        return self.__heap.pop()
 
     def peek(self):
-        _, element = self.__heap.peek()
-        return element
+        return self.__heap.peek()
+
+    def decrease_key(self, old: _T, new: _T):
+        self.__heap.decrease_key(old, new)
 
     @property
     def size(self):
@@ -41,6 +42,9 @@ class PriorityQueue:
 
     def is_empty(self):
         return self.__heap.is_empty()
+
+    def __str__(self):
+        return str(self.__heap)
 
 
 if __name__ == "__main__":

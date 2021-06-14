@@ -8,7 +8,7 @@ class PacedCircularQueue:
     __max_size: int
     __last_added_node: Node
     __last_added_distance: int
-    __next_node: Node  # The next node to start counting when we remove
+    __next_node: Node  # The next node to source counting when we remove
 
     def __init__(self, max_size: int):
         self.__head = Node(None)
@@ -107,7 +107,7 @@ class PacedCircularQueue:
                 if current is self.__head:  # the head cannot be removed
                     current = current.next
 
-            # setting the next node to start counting
+            # setting the next node to source counting
             if current.next is self.__head and self.__size > 1:
                 self.__next_node = self.__head.next
             else:

@@ -71,6 +71,11 @@ class BinaryHeap:
 
         return removed
 
+    def decrease_key(self, old: _T, new: _T):
+        old_index = self.__values.index(old)
+        self.__values[old_index] = new
+        self.__bubble_up(old_index)
+
     def __heapify(self):
         for i in reversed(range(self.size() // 2)):
             self.__bubble_down(i)
@@ -146,20 +151,20 @@ class BinaryHeap:
 
     def __parent(self, child: int) -> _T or None:
         """return the index of the parent of the node given by his index.
-        Returns -infinite if the given node is the root"""
+        Returns None if the given node is the root"""
         i_parent = (child-1) // 2
         return None if child == 0 else self.__values[i_parent]
 
     def __left_child(self, i: int) -> _T or None:
         """return the index of the right child of the node given by his index.
-        Returns infinite if no left child."""
+        Returns None if no left child."""
         i_left_child = 2*i + 1
         return (None if i_left_child >= len(self.__values) else
                 self.__values[i_left_child])
 
     def __right_child(self, i: int) -> _T or None:
         """return the value of the right child of the node given by his index.
-        Returns infinite if no right child. """
+        Returns None if no right child. """
         i_right_child = 2*i + 2
         return None if i_right_child >= len(self.__values) else self.__values[i_right_child]
 
@@ -200,7 +205,8 @@ if __name__ == "__main__":
     bh.push(4)
     bh.push(-1)
     bh.push(-3)
+    bh.decrease_key(20, -2)
 
-    bh2 = BinaryHeap(list(np.random.randint(low=0, high=100, size=15)))
-    bh2.print_tree()
-    print(bh2)
+    # bh2 = BinaryHeap(list(np.random.randint(low=0, high=100, size=15)))
+    # bh2.print_tree()
+    print(bh)
